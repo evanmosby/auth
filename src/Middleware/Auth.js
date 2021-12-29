@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /*
  * adonis-auth
@@ -7,9 +7,9 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
-*/
+ */
 
-const debug = require('debug')('adonis:auth')
+const debug = require("debug")("adonis:auth");
 
 /**
  * Auth middleware protects the Routes ensuring a user is loggedin
@@ -35,9 +35,9 @@ const debug = require('debug')('adonis:auth')
  * @param {Config} Config - Reference to config provider
  */
 class Auth {
-  constructor (Config) {
-    const authenticator = Config.get('auth.authenticator')
-    this.scheme = Config.get(`auth.${authenticator}.scheme`, null)
+  constructor(Config) {
+    const authenticator = Config.get("auth.authenticator");
+    this.scheme = Config.get(`auth.${authenticator}.scheme`, null);
   }
 
   /**
@@ -51,11 +51,12 @@ class Auth {
    *
    * @return {void}
    */
-  async _authenticate (auth, schemes) {
-    let lastError = null
-    schemes = Array.isArray(schemes) && schemes.length ? schemes : [this.scheme]
+  async _authenticate(auth, schemes) {
+    let lastError = null;
+    schemes =
+      Array.isArray(schemes) && schemes.length ? schemes : [this.scheme];
 
-    debug('attempting to authenticate via %j scheme(s)', schemes)
+    debug("attempting to authenticate via %j scheme(s)", schemes);
 
     /**
      * Loop over all the defined schemes and wait until use is logged
@@ -63,22 +64,22 @@ class Auth {
      */
     for (const scheme of schemes) {
       try {
-        const authenticator = auth.authenticator(scheme)
-        await authenticator.check()
+        const authenticator = auth.authenticator(scheme);
+        await authenticator.check();
 
-        debug('authenticated using %s scheme', scheme)
+        debug("authenticated using %s scheme", scheme);
 
         /**
          * Swapping the main authentication instance with the one using which user
          * logged in.
          */
-        auth.authenticatorInstance = authenticator
+        auth.authenticatorInstance = authenticator;
 
-        lastError = null
-        break
+        lastError = null;
+        break;
       } catch (error) {
-        debug('authentication failed using %s scheme', scheme)
-        lastError = error
+        debug("authentication failed using %s scheme", scheme);
+        lastError = error;
       }
     }
 
@@ -87,7 +88,7 @@ class Auth {
      * then throw it back
      */
     if (lastError) {
-      throw lastError
+      throw lastError;
     }
   }
 
@@ -105,26 +106,26 @@ class Auth {
    *
    * @return {void}
    */
-  async handle ({ auth, view }, next, schemes) {
-    await this._authenticate(auth, schemes)
+  async handle({ auth, view }, next, schemes) {
+    await this._authenticate(auth, schemes);
 
     /**
      * For compatibility with the old API
      */
-    auth.current = auth.authenticatorInstance
+    auth.current = auth.authenticatorInstance;
 
     /**
      * Sharing user with the view
      */
-    if (view && typeof (view.share) === 'function') {
+    if (view && typeof view.share === "function") {
       view.share({
         auth: {
-          user: auth.current.user
-        }
-      })
+          user: auth.current.user,
+        },
+      });
     }
 
-    await next()
+    await next();
   }
 
   /**
@@ -139,16 +140,16 @@ class Auth {
    *
    * @return {void}
    */
-  async wsHandle ({ auth }, next, schemes) {
-    await this._authenticate(auth, schemes)
+  async wsHandle({ auth }, next, schemes) {
+    await this._authenticate(auth, schemes);
 
     /**
      * For compatibility with the old API
      */
-    auth.current = auth.authenticatorInstance
+    auth.current = auth.authenticatorInstance;
 
-    await next()
+    await next();
   }
 }
 
-module.exports = Auth
+module.exports = Auth;

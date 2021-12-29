@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /*
  * adonis-lucid
@@ -7,11 +7,11 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
-*/
+ */
 
-const _ = require('lodash')
-const { ioc } = require('@adonisjs/fold')
-const debug = require('debug')('adonis:auth')
+const _ = require("lodash");
+const { ioc } = require("@adonisjs/fold");
+const debug = require("debug")("adonis:auth");
 
 /**
  * Database serializer uses the Lucid models provider to fetch
@@ -24,11 +24,11 @@ const debug = require('debug')('adonis:auth')
  * @param {Object} Hash Hash provider
  */
 class LucidSerializer {
-  constructor (Hash) {
-    this.Hash = Hash
-    this._config = null
-    this._Model = null
-    this._queryCallback = null
+  constructor(Hash) {
+    this.Hash = Hash;
+    this._config = null;
+    this._Model = null;
+    this._queryCallback = null;
   }
 
   /* istanbul ignore next */
@@ -42,8 +42,8 @@ class LucidSerializer {
    * @ignore
    * @static
    */
-  static get inject () {
-    return ['Adonis/Src/Hash']
+  static get inject() {
+    return ["Adonis/Src/Hash"];
   }
 
   /**
@@ -57,13 +57,13 @@ class LucidSerializer {
    *
    * @private
    */
-  _getQuery () {
-    const query = this._Model.query()
-    if (typeof (this._queryCallback) === 'function') {
-      this._queryCallback(query)
-      this._queryCallback = null
+  _getQuery() {
+    const query = this._Model.query();
+    if (typeof this._queryCallback === "function") {
+      this._queryCallback(query);
+      this._queryCallback = null;
     }
-    return query
+    return query;
   }
 
   /**
@@ -80,19 +80,19 @@ class LucidSerializer {
    *
    * @private
    */
-  _selectTokens (user, tokens, inverse) {
-    const query = user.tokens()
-    const method = inverse ? 'whereNotIn' : 'whereIn'
+  _selectTokens(user, tokens, inverse) {
+    const query = user.tokens();
+    const method = inverse ? "whereNotIn" : "whereIn";
 
-    const tokensList = _.compact(_.castArray(tokens))
+    const tokensList = _.compact(_.castArray(tokens));
     if (!_.size(tokensList)) {
-      return query
+      return query;
     }
 
-    debug('creating query: tokens.query.%s(\'token\', %j)', method, tokensList)
-    query[method]('token', tokensList)
+    debug("creating query: tokens.query.%s('token', %j)", method, tokensList);
+    query[method]("token", tokensList);
 
-    return query
+    return query;
   }
 
   /**
@@ -103,8 +103,8 @@ class LucidSerializer {
    * @type {String}
    * @readOnly
    */
-  get primaryKey () {
-    return this._Model.primaryKey
+  get primaryKey() {
+    return this._Model.primaryKey;
   }
 
   /**
@@ -117,9 +117,9 @@ class LucidSerializer {
    *
    * @return {void}
    */
-  setConfig (config) {
-    this._config = config
-    this._Model = ioc.make(this._config.model)
+  setConfig(config) {
+    this._config = config;
+    this._Model = ioc.make(this._config.model);
   }
 
   /**
@@ -143,9 +143,9 @@ class LucidSerializer {
    * }).attempt()
    * ```
    */
-  query (callback) {
-    this._queryCallback = callback
-    return this
+  query(callback) {
+    this._queryCallback = callback;
+    return this;
   }
 
   /**
@@ -159,9 +159,9 @@ class LucidSerializer {
    *
    * @return {User|Null}
    */
-  async findById (id) {
-    debug('finding user with primary key as %s', id)
-    return this._getQuery().where(this.primaryKey, id).first()
+  async findById(id) {
+    debug("finding user with primary key as %s", id);
+    return this._getQuery().where(this.primaryKey, id).first();
   }
 
   /**
@@ -174,9 +174,9 @@ class LucidSerializer {
    *
    * @return {Model|Null} The model instance or `null`
    */
-  async findByUid (uid) {
-    debug('finding user with %s as %s', this._config.uid, uid)
-    return this._getQuery().where(this._config.uid, uid).first()
+  async findByUid(uid) {
+    debug("finding user with %s as %s", this._config.uid, uid);
+    return this._getQuery().where(this._config.uid, uid).first();
   }
 
   /**
@@ -190,11 +190,11 @@ class LucidSerializer {
    *
    * @return {Boolean}
    */
-  async validateCredentails (user, password) {
+  async validateCredentails(user, password) {
     if (!user || !user[this._config.password]) {
-      return false
+      return false;
     }
-    return this.Hash.verify(password, user[this._config.password])
+    return this.Hash.verify(password, user[this._config.password]);
   }
 
   /**
@@ -208,14 +208,17 @@ class LucidSerializer {
    *
    * @return {Object|Null}
    */
-  async findByToken (token, type) {
-    debug('finding user for %s token', token)
+  async findByToken(token, type) {
+    debug("finding user for %s token", token);
 
-    return this
-      ._getQuery()
-      .whereHas('tokens', function (builder) {
-        builder.where({ token, type, is_revoked: false })
-      }).first()
+    return this._getQuery()
+      .whereHas("tokens", function (builder) {
+        builder.where({ token, type, is_revoked: false });
+      })
+      .with("tokens", function (builder) {
+        builder.where({ token });
+      })
+      .first();
   }
 
   /**
@@ -232,10 +235,19 @@ class LucidSerializer {
    *
    * @return {void}
    */
-  async saveToken (user, token, type) {
-    const insertPayload = { token, type, is_revoked: false }
-    debug('saving token for %s user with %j payload', user.primaryKeyValue, insertPayload)
-    await user.tokens().create(insertPayload)
+  async saveToken(user, token, type, payload = null) {
+    let insertPayload = { token, type, is_revoked: false };
+
+    // USED IF CREATING APU TOKEN WITH CLIENT FIELDS
+    if (payload) {
+      insertPayload = { ...insertPayload, ...payload };
+    }
+    debug(
+      "saving token for %s user with %j payload",
+      user.primaryKeyValue,
+      insertPayload
+    );
+    await user.tokens().create(insertPayload);
   }
 
   /**
@@ -249,9 +261,9 @@ class LucidSerializer {
    *
    * @return {Number}           Number of impacted rows
    */
-  async revokeTokens (user, tokens = null, inverse = false) {
-    const query = this._selectTokens(user, tokens, inverse)
-    return query.update({ is_revoked: true })
+  async revokeTokens(user, tokens = null, inverse = false) {
+    const query = this._selectTokens(user, tokens, inverse);
+    return query.update({ is_revoked: true });
   }
 
   /**
@@ -265,9 +277,9 @@ class LucidSerializer {
    *
    * @return {Number}           Number of impacted rows
    */
-  async deleteTokens (user, tokens = null, inverse = false) {
-    const query = this._selectTokens(user, tokens, inverse)
-    return query.delete()
+  async deleteTokens(user, tokens = null, inverse = false) {
+    const query = this._selectTokens(user, tokens, inverse);
+    return query.delete();
   }
 
   /**
@@ -281,9 +293,9 @@ class LucidSerializer {
    *
    * @return {Object}
    */
-  async listTokens (user, type) {
-    return user.tokens().where({ type, is_revoked: false }).fetch()
+  async listTokens(user, type) {
+    return user.tokens().where({ type, is_revoked: false }).fetch();
   }
 }
 
-module.exports = LucidSerializer
+module.exports = LucidSerializer;

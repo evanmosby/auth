@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /*
  * adonis-auth
@@ -7,13 +7,13 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
-*/
+ */
 
-const uuid = require('uuid')
-const GE = require('@adonisjs/generic-exceptions')
+const uuid = require("uuid");
+const GE = require("@adonisjs/generic-exceptions");
 
-const BaseTokenScheme = require('./BaseToken')
-const CE = require('../Exceptions')
+const BaseTokenScheme = require("./BaseToken");
+const CE = require("../Exceptions");
 
 /**
  * This scheme allows to make use of Github style personal API tokens
@@ -57,9 +57,9 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async attempt (uid, password) {
-    const user = await this.validate(uid, password, true)
-    return this.generate(user)
+  async attempt(uid, password) {
+    const user = await this.validate(uid, password, true);
+    return this.generate(user);
   }
 
   /**
@@ -84,25 +84,41 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async generate (user) {
+  async generate(user) {
     /**
      * Throw exception when user is not persisted to
      * database
      */
-    const userId = user[this.primaryKey]
+    const userId = user[this.primaryKey];
     if (!userId) {
-      throw GE.RuntimeException.invoke('Primary key value is missing for user')
+      throw GE.RuntimeException.invoke("Primary key value is missing for user");
     }
 
-    const plainToken = uuid.v4().replace(/-/g, '')
-    await this._serializerInstance.saveToken(user, plainToken, 'api_token')
+    const plainToken = uuid.v4().replace(/-/g, "");
+
+    const client = this._ctx.request._body.client ?? "requestip";
+    const referer = this._ctx.request._body.referer;
+    const ip = this._ctx.request._body.ip ?? this._ctx.request.ip();
+    const payload = { client };
+    if (referer) {
+      payload.referer = referer;
+    } else {
+      payload.ip = ip;
+    }
+
+    await this._serializerInstance.saveToken(
+      user,
+      plainToken,
+      "api_token",
+      payload
+    );
 
     /**
      * Encrypting the token before giving it to the
      * user.
      */
-    const token = this.Encryption.encrypt(plainToken)
-    return { type: 'bearer', token }
+    const token = this.Encryption.encrypt(plainToken);
+    return { type: "bearer", token };
   }
 
   /**
@@ -128,35 +144,53 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async check () {
+  async check() {
     /**
      * User already exists for this request, so there is
      * no need to re-pull them from the database
      */
     if (this.user) {
-      return true
+      return true;
     }
 
-    const token = this.getAuthHeader(['bearer', 'token'])
+    const token = this.getAuthHeader(["bearer", "token"]);
     if (!token) {
-      throw CE.InvalidApiToken.invoke()
+      throw CE.InvalidApiToken.invoke();
     }
 
     /**
      * Decrypting the token before querying
      * the db.
      */
-    const plainToken = this.Encryption.decrypt(token)
-    this.user = await this._serializerInstance.findByToken(plainToken, 'api_token')
+    const plainToken = this.Encryption.decrypt(token);
+    this.user = await this._serializerInstance.findByToken(
+      plainToken,
+      "api_token"
+    );
 
     /**
      * Throw exception when user is not found
      */
     if (!this.user) {
-      throw CE.InvalidApiToken.invoke()
+      throw CE.InvalidApiToken.invoke();
     }
 
-    return true
+    const tokenInstance = this.user.getRelated("tokens").rows[0];
+    if (tokenInstance.referer) {
+      if (
+        !(
+          this._ctx.request.headers().referer &&
+          this._ctx.request.headers().referer.includes(tokenInstance.referer)
+        )
+      ) {
+        throw CE.InvalidApiToken.invoke();
+      }
+    } else {
+      if (tokenInstance.ip !== this._ctx.request.ip()) {
+        throw CE.InvalidApiToken.invoke();
+      }
+    }
+    return true;
   }
 
   /**
@@ -171,27 +205,27 @@ class ApiScheme extends BaseTokenScheme {
    *
    * @example
    * ```js
- *   await auth.loginIfCan()
+   *   await auth.loginIfCan()
    * ```
    */
-  async loginIfCan () {
+  async loginIfCan() {
     if (this.user) {
-      return true
+      return true;
     }
 
-    const token = this.getAuthHeader(['bearer', 'token'])
+    const token = this.getAuthHeader(["bearer", "token"]);
 
     /**
      * Do not attempt to check, when token itself is missing
      */
     if (!token) {
-      return false
+      return false;
     }
 
     try {
-      return await this.check()
+      return await this.check();
     } catch (error) {
-      return false
+      return false;
       // swallow exception
     }
   }
@@ -206,16 +240,16 @@ class ApiScheme extends BaseTokenScheme {
    *
    * @return {Array}
    */
-  async listTokensForUser (user) {
+  async listTokensForUser(user) {
     if (!user) {
-      return []
+      return [];
     }
 
-    const tokens = await this._serializerInstance.listTokens(user, 'api_token')
+    const tokens = await this._serializerInstance.listTokens(user, "api_token");
     return tokens.toJSON().map((token) => {
-      token.token = this.Encryption.encrypt(token.token)
-      return token
-    })
+      token.token = this.Encryption.encrypt(token.token);
+      return token;
+    });
   }
 
   /**
@@ -233,13 +267,13 @@ class ApiScheme extends BaseTokenScheme {
    *
    * @return {void}
    */
-  async clientLogin (headerFn, sessionFn, tokenOrUser) {
-    if (typeof (tokenOrUser) !== 'string') {
-      const { token } = await this.generate(tokenOrUser)
-      tokenOrUser = token
+  async clientLogin(headerFn, sessionFn, tokenOrUser) {
+    if (typeof tokenOrUser !== "string") {
+      const { token } = await this.generate(tokenOrUser);
+      tokenOrUser = token;
     }
-    headerFn('authorization', `Bearer ${tokenOrUser}`)
+    headerFn("authorization", `Bearer ${tokenOrUser}`);
   }
 }
 
-module.exports = ApiScheme
+module.exports = ApiScheme;
