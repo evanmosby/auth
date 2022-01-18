@@ -164,6 +164,22 @@ class ApiScheme extends BaseTokenScheme {
       throw CE.InvalidApiToken.invoke();
     }
 
+    const tokenInstance = this.user.getRelated("tokens").rows[0];
+    if (tokenInstance.referer) {
+      if (
+        !(
+          this._ctx.request.headers().referer &&
+          this._ctx.request.headers().referer.includes(tokenInstance.referer)
+        )
+      ) {
+        throw CE.InvalidApiToken.invoke();
+      }
+    } else {
+      if (tokenInstance.ip !== this._ctx.request.ip()) {
+        throw CE.InvalidApiToken.invoke();
+      }
+    }
+
     return true;
   }
 

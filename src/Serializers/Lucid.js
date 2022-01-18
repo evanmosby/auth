@@ -210,10 +210,12 @@ class LucidSerializer {
    */
   async findByToken(token, type) {
     debug("finding user for %s token", token);
-
     return this._getQuery()
       .whereHas("tokens", function (builder) {
         builder.where({ token, type, is_revoked: false });
+      })
+      .with("tokens", function (builder) {
+        builder.where({ token });
       })
       .first();
   }
