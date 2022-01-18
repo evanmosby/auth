@@ -215,9 +215,6 @@ class LucidSerializer {
       .whereHas("tokens", function (builder) {
         builder.where({ token, type, is_revoked: false });
       })
-      .with("tokens", function (builder) {
-        builder.where({ token });
-      })
       .first();
   }
 
@@ -235,13 +232,9 @@ class LucidSerializer {
    *
    * @return {void}
    */
-  async saveToken(user, token, type, payload = null) {
+  async saveToken(user, token, type, extraProps = null) {
     let insertPayload = { token, type, is_revoked: false };
-
-    // USED IF CREATING APU TOKEN WITH CLIENT FIELDS
-    if (payload) {
-      insertPayload = { ...insertPayload, ...payload };
-    }
+    if (extraProps) insertPayload = { ...insertPayload, ...extraProps };
     debug(
       "saving token for %s user with %j payload",
       user.primaryKeyValue,

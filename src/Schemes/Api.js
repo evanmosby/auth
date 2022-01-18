@@ -57,9 +57,9 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async attempt(uid, password) {
+  async attempt(uid, password, extraProps = null) {
     const user = await this.validate(uid, password, true);
-    return this.generate(user);
+    return this.generate(user, extraProps);
   }
 
   /**
@@ -84,7 +84,7 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async generate(user) {
+  async generate(user, extraProps) {
     /**
      * Throw exception when user is not persisted to
      * database
@@ -95,22 +95,11 @@ class ApiScheme extends BaseTokenScheme {
     }
 
     const plainToken = uuid.v4().replace(/-/g, "");
-
-    const client = this._ctx.request._body.client ?? "requestip";
-    const referer = this._ctx.request._body.referer;
-    const ip = this._ctx.request._body.ip ?? this._ctx.request.ip();
-    const payload = { client };
-    if (referer) {
-      payload.referer = referer;
-    } else {
-      payload.ip = ip;
-    }
-
     await this._serializerInstance.saveToken(
       user,
       plainToken,
       "api_token",
-      payload
+      extraProps
     );
 
     /**
@@ -175,21 +164,6 @@ class ApiScheme extends BaseTokenScheme {
       throw CE.InvalidApiToken.invoke();
     }
 
-    const tokenInstance = this.user.getRelated("tokens").rows[0];
-    if (tokenInstance.referer) {
-      if (
-        !(
-          this._ctx.request.headers().referer &&
-          this._ctx.request.headers().referer.includes(tokenInstance.referer)
-        )
-      ) {
-        throw CE.InvalidApiToken.invoke();
-      }
-    } else {
-      if (tokenInstance.ip !== this._ctx.request.ip()) {
-        throw CE.InvalidApiToken.invoke();
-      }
-    }
     return true;
   }
 
