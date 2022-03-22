@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /*
  * adonis-auth
@@ -7,20 +7,20 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
-*/
+ */
 
-const Resetable = require('resetable')
-const jwt = require('jsonwebtoken')
-const uuid = require('uuid')
-const _ = require('lodash')
-const util = require('util')
-const GE = require('@adonisjs/generic-exceptions')
+const Resetable = require("resetable");
+const jwt = require("jsonwebtoken");
+const uuid = require("uuid");
+const _ = require("lodash");
+const util = require("util");
+const GE = require("@adonisjs/generic-exceptions");
 
-const CE = require('../Exceptions')
-const BaseTokenScheme = require('./BaseToken')
+const CE = require("../Exceptions");
+const BaseTokenScheme = require("./BaseToken");
 
-const signToken = util.promisify(jwt.sign)
-const verifyToken = util.promisify(jwt.verify)
+const signToken = util.promisify(jwt.sign);
+const verifyToken = util.promisify(jwt.verify);
 
 /**
  * This scheme allows to make use of JWT tokens to authenticate the user.
@@ -38,9 +38,9 @@ const verifyToken = util.promisify(jwt.verify)
  * @extends BaseScheme
  */
 class JwtScheme extends BaseTokenScheme {
-  constructor (Encryption) {
-    super(Encryption)
-    this._generateRefreshToken = new Resetable(false)
+  constructor(Encryption) {
+    super(Encryption);
+    this._generateRefreshToken = new Resetable(false);
   }
 
   /**
@@ -51,8 +51,8 @@ class JwtScheme extends BaseTokenScheme {
    * @type {Object|Null}
    * @readOnly
    */
-  get jwtOptions () {
-    return _.get(this._config, 'options', null)
+  get jwtOptions() {
+    return _.get(this._config, "options", null);
   }
 
   /**
@@ -62,8 +62,8 @@ class JwtScheme extends BaseTokenScheme {
    * @type {String|Null}
    * @readOnly
    */
-  get jwtSecret () {
-    return _.get(this.jwtOptions, 'secret', null)
+  get jwtSecret() {
+    return _.get(this.jwtOptions, "secret", null);
   }
 
   /**
@@ -73,8 +73,8 @@ class JwtScheme extends BaseTokenScheme {
    * @type {String|Null}
    * @readOnly
    */
-  get jwtPublic () {
-    return _.get(this.jwtOptions, 'public', null)
+  get jwtPublic() {
+    return _.get(this.jwtOptions, "public", null);
   }
 
   /**
@@ -89,9 +89,12 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @private
    */
-  _signToken (payload, options) {
-    options = _.size(options) && _.isPlainObject(options) ? options : _.omit(this.jwtOptions, ['secret', 'public'])
-    return signToken(payload, this.jwtSecret, options)
+  _signToken(payload, options) {
+    options =
+      _.size(options) && _.isPlainObject(options)
+        ? options
+        : _.omit(this.jwtOptions, ["secret", "public"]);
+    return signToken(payload, this.jwtSecret, options);
   }
 
   /**
@@ -106,10 +109,11 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @private
    */
-  _verifyToken (token) {
-    const options = _.omit(this.jwtOptions, ['secret', 'public'])
-    const secretOrPublicKey = this.jwtPublic !== null ? this.jwtPublic : this.jwtSecret
-    return verifyToken(token, secretOrPublicKey, options)
+  _verifyToken(token) {
+    const options = _.omit(this.jwtOptions, ["secret", "public"]);
+    const secretOrPublicKey =
+      this.jwtPublic !== null ? this.jwtPublic : this.jwtSecret;
+    return verifyToken(token, secretOrPublicKey, options);
   }
 
   /**
@@ -123,10 +127,14 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @private
    */
-  async _saveRefreshToken (user) {
-    const refreshToken = uuid.v4()
-    await this._serializerInstance.saveToken(user, refreshToken, 'jwt_refresh_token')
-    return refreshToken
+  async _saveRefreshToken(user) {
+    const refreshToken = uuid.v4();
+    await this._serializerInstance.saveToken(
+      user,
+      refreshToken,
+      "jwt_refresh_token"
+    );
+    return refreshToken;
   }
 
   /**
@@ -149,9 +157,9 @@ class JwtScheme extends BaseTokenScheme {
    *   .attempt(username, password)
    * ```
    */
-  withRefreshToken () {
-    this._generateRefreshToken.set(true)
-    return this
+  withRefreshToken() {
+    this._generateRefreshToken.set(true);
+    return this;
   }
 
   /**
@@ -172,8 +180,8 @@ class JwtScheme extends BaseTokenScheme {
    *   .generateForRefreshToken(token)
    * ```
    */
-  newRefreshToken () {
-    return this.withRefreshToken()
+  newRefreshToken() {
+    return this.withRefreshToken();
   }
 
   /**
@@ -210,9 +218,9 @@ class JwtScheme extends BaseTokenScheme {
    * auth.attempt(username, password, { ipAddress: '...' })
    * ```
    */
-  async attempt (uid, password, jwtPayload, jwtOptions) {
-    const user = await this.validate(uid, password, true)
-    return this.generate(user, jwtPayload, jwtOptions)
+  async attempt(uid, password, jwtPayload, jwtOptions) {
+    const user = await this.validate(uid, password, true);
+    return this.generate(user, jwtPayload, jwtOptions);
   }
 
   /**
@@ -251,22 +259,26 @@ class JwtScheme extends BaseTokenScheme {
    * auth.generate(user, { ipAddress: '...' })
    * ```
    */
-  async generate (user, jwtPayload, jwtOptions) {
+  async generate(user, jwtPayload, jwtOptions) {
     /**
      * Throw exception when trying to generate token without
      * jwt secret
      */
     if (!this.jwtSecret) {
-      throw GE.RuntimeException.incompleteConfig(['secret'], 'config/auth.js', 'jwt')
+      throw GE.RuntimeException.incompleteConfig(
+        ["secret"],
+        "config/auth.js",
+        "jwt"
+      );
     }
 
     /**
      * Throw exception when user is not persisted to
      * database
      */
-    const userId = user[this.primaryKey]
+    const userId = user[this.primaryKey];
     if (!userId) {
-      throw GE.RuntimeException.invoke('Primary key value is missing for user')
+      throw GE.RuntimeException.invoke("Primary key value is missing for user");
     }
 
     /**
@@ -274,40 +286,46 @@ class JwtScheme extends BaseTokenScheme {
      *
      * @type {Object}
      */
-    const payload = { uid: userId }
+    const payload = { uid: userId };
 
     if (jwtPayload === true) {
       /**
        * Attach user as data object only when
        * jwtPayload is true
        */
-      const data = typeof (user.toJSON) === 'function' ? user.toJSON() : user
+      const data = typeof user.toJSON === "function" ? user.toJSON() : user;
 
       /**
        * Remove password from jwt data
        */
-      payload.data = _.omit(data, this._config.password)
+      payload.data = _.omit(data, this._config.password);
     } else if (_.isPlainObject(jwtPayload)) {
       /**
        * Attach payload as it is when it's an object
        */
-      payload.data = jwtPayload
+      payload.data = jwtPayload;
     }
 
     /**
      * Return the generate token
      */
-    const token = await this._signToken(payload, jwtOptions)
-    const withRefresh = this._generateRefreshToken.pull()
-    const plainRefreshToken = withRefresh ? await this._saveRefreshToken(user) : null
+    const token = await this._signToken(payload, jwtOptions);
+    const decoded = jwt.decode(token, { complete: true });
+
+    const withRefresh = this._generateRefreshToken.pull();
+    const plainRefreshToken = withRefresh
+      ? await this._saveRefreshToken(user)
+      : null;
 
     /**
      * Encrypting the token before giving it to the
      * user.
      */
-    const refreshToken = plainRefreshToken ? this.Encryption.encrypt(plainRefreshToken) : null
+    const refreshToken = plainRefreshToken
+      ? this.Encryption.encrypt(plainRefreshToken)
+      : null;
 
-    return { type: 'bearer', token, refreshToken }
+    return { type: "bearer", token, refreshToken, ...decoded };
   }
 
   /**
@@ -337,13 +355,16 @@ class JwtScheme extends BaseTokenScheme {
    *   .generateForRefreshToken(refreshToken)
    * ```
    */
-  async generateForRefreshToken (refreshToken, jwtPayload, jwtOptions) {
-    const user = await this._serializerInstance.findByToken(this.Encryption.decrypt(refreshToken), 'jwt_refresh_token')
+  async generateForRefreshToken(refreshToken, jwtPayload, jwtOptions) {
+    const user = await this._serializerInstance.findByToken(
+      this.Encryption.decrypt(refreshToken),
+      "jwt_refresh_token"
+    );
     if (!user) {
-      throw CE.InvalidRefreshToken.invoke(refreshToken)
+      throw CE.InvalidRefreshToken.invoke(refreshToken);
     }
 
-    const token = await this.generate(user, jwtPayload, jwtOptions)
+    const token = await this.generate(user, jwtPayload, jwtOptions);
 
     /**
      * If user generated a new refresh token, in that case we
@@ -352,12 +373,12 @@ class JwtScheme extends BaseTokenScheme {
      * token in the return payload
      */
     if (!token.refreshToken) {
-      token.refreshToken = refreshToken
+      token.refreshToken = refreshToken;
     } else {
-      await this.revokeTokensForUser(user, [refreshToken], true)
+      await this.revokeTokensForUser(user, [refreshToken], true);
     }
 
-    return token
+    return token;
   }
 
   /**
@@ -382,36 +403,60 @@ class JwtScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async check () {
+  async check() {
     if (this.user) {
-      return true
+      return true;
     }
 
-    const token = this.getAuthHeader()
+    const token = this.getAuthHeader();
 
     /**
      * Verify jwt token and wrap exception inside custom
      * exception classes
      */
     try {
-      this.jwtPayload = await this._verifyToken(token)
+      this.jwtPayload = await this._verifyToken(token);
     } catch ({ name, message }) {
-      if (name === 'TokenExpiredError') {
-        throw CE.ExpiredJwtToken.invoke()
+      if (name === "TokenExpiredError") {
+        throw CE.ExpiredJwtToken.invoke();
       }
-      throw CE.InvalidJwtToken.invoke(message)
+      throw CE.InvalidJwtToken.invoke(message);
     }
 
-    this.user = await this._serializerInstance.findById(this.jwtPayload.uid)
+    this.user = await this._serializerInstance.findById(this.jwtPayload.uid);
 
     /**
      * Throw exception when user is not found
      */
     if (!this.user) {
-      throw CE.InvalidJwtToken.invoke()
+      throw CE.InvalidJwtToken.invoke();
     }
 
-    return true
+    /**
+     * If the token has referer in the payload, check if the referer header matches
+     */
+    if (this.jwtPayload.data?.referer) {
+      if (
+        !(
+          this._ctx.request.headers().referer &&
+          this._ctx.request
+            .headers()
+            .referer.includes(this.jwtPayload.data.referer)
+        )
+      ) {
+        throw CE.InvalidApiToken.invoke();
+      }
+    } else if (
+    /**
+     * If the token has an IP in the payload, check if request IP matches
+     */
+      this.jwtPayload.data?.ip &&
+      this.jwtPayload.data.ip !== this._ctx.request.ip()
+    ) {
+      throw CE.InvalidJwtToken.invoke();
+    }
+
+    return true;
   }
 
   /**
@@ -426,27 +471,27 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @example
    * ```js
- *   await auth.loginIfCan()
+   *   await auth.loginIfCan()
    * ```
    */
-  async loginIfCan () {
+  async loginIfCan() {
     if (this.user) {
-      return true
+      return true;
     }
 
-    const token = this.getAuthHeader()
+    const token = this.getAuthHeader();
 
     /**
      * Do not attempt to check, when token itself is missing
      */
     if (!token) {
-      return false
+      return false;
     }
 
     try {
-      return await this.check()
+      return await this.check();
     } catch (error) {
-      return false
+      return false;
       // swallow exception
     }
   }
@@ -461,16 +506,19 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @return {Array}
    */
-  async listTokensForUser (user) {
+  async listTokensForUser(user) {
     if (!user) {
-      return []
+      return [];
     }
 
-    const tokens = await this._serializerInstance.listTokens(user, 'jwt_refresh_token')
+    const tokens = await this._serializerInstance.listTokens(
+      user,
+      "jwt_refresh_token"
+    );
     return tokens.toJSON().map((token) => {
-      token.token = this.Encryption.encrypt(token.token)
-      return token
-    })
+      token.token = this.Encryption.encrypt(token.token);
+      return token;
+    });
   }
 
   /**
@@ -487,10 +535,10 @@ class JwtScheme extends BaseTokenScheme {
    *
    * @return {void}
    */
-  async clientLogin (headerFn, sessionFn, user) {
-    const { token } = await this.generate(user)
-    headerFn('authorization', `Bearer ${token}`)
+  async clientLogin(headerFn, sessionFn, user) {
+    const { token } = await this.generate(user);
+    headerFn("authorization", `Bearer ${token}`);
   }
 }
 
-module.exports = JwtScheme
+module.exports = JwtScheme;
