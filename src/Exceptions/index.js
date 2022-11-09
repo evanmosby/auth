@@ -24,7 +24,7 @@ class UserNotFoundException extends GE.LogicalException {
       throw new Error('Cannot invoke exception without uidField, passwordField or authScheme')
     }
 
-    const error = new this(message, 401, 'E_USER_NOT_FOUND')
+    const error = new this(message, 401, 'E_AUTH_INVALID')
     error.uidField = uidField
     error.passwordField = passwordField
     error.authScheme = authScheme
@@ -96,7 +96,7 @@ class PasswordMisMatchException extends GE.LogicalException {
     if (!passwordField || !authScheme) {
       throw new Error('Cannot invoke exception without passwordField or authScheme')
     }
-    const error = new this(message, 401, 'E_PASSWORD_MISMATCH')
+    const error = new this(message, 401, 'E_AUTH_INVALID')
     error.passwordField = passwordField
     error.authScheme = authScheme
 
@@ -119,7 +119,7 @@ class PasswordMisMatchException extends GE.LogicalException {
    */
   async handle ({ status, passwordField, authScheme }, { request, response, session }) {
     const isJSON = request.accepts(['html', 'json']) === 'json'
-    const errorMessages = [{ field: passwordField, message: 'Invalid user password' }]
+    const errorMessages = [{ field: passwordField, message: 'Invalid credential' }]
 
     /**
      * If request is json then return a json response
@@ -207,7 +207,7 @@ class InvalidBasicAuthException extends GE.LogicalException {
  */
 class InvalidSessionException extends GE.LogicalException {
   static invoke () {
-    return new this('Invalid session', 401, 'E_INVALID_SESSION')
+    return new this('Invalid session', 401, 'E_AUTH_SESSION_INVALID')
   }
 }
 
@@ -219,7 +219,7 @@ class InvalidSessionException extends GE.LogicalException {
  */
 class InvalidJwtToken extends GE.LogicalException {
   static invoke (message) {
-    return new this(message || 'The Jwt token is invalid', 401, 'E_INVALID_JWT_TOKEN')
+    return new this(message || 'The access token is missing or invalid', 401, 'E_AUTH_TOKEN_INVALID')
   }
 }
 
@@ -231,7 +231,7 @@ class InvalidJwtToken extends GE.LogicalException {
  */
 class InvalidRefreshToken extends GE.LogicalException {
   static invoke (refreshToken) {
-    return new this(`Invalid refresh token ${refreshToken}`, 401, 'E_INVALID_JWT_REFRESH_TOKEN')
+    return new this("The refresh token is invalid", 401, 'E_AUTH_TOKEN_INVALID')
   }
 }
 
@@ -242,7 +242,7 @@ class InvalidRefreshToken extends GE.LogicalException {
  */
 class ExpiredJwtToken extends GE.LogicalException {
   static invoke () {
-    return new this('The jwt token has been expired. Generate a new one to continue', 401, 'E_JWT_TOKEN_EXPIRED')
+    return new this('The access token has expired', 401, 'E_AUTH_TOKEN_INVALID')
   }
 }
 
@@ -253,7 +253,7 @@ class ExpiredJwtToken extends GE.LogicalException {
  */
 class InvalidApiToken extends GE.LogicalException {
   static invoke () {
-    return new this('The api token is missing or invalid', 401, 'E_INVALID_API_TOKEN')
+    return new this('The access token is missing or invalid', 401, 'E_AUTH_TOKEN_INVALID')
   }
 }
 

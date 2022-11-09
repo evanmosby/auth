@@ -276,7 +276,7 @@ class BaseScheme {
    * @return {PasswordMisMatchException}
    */
   invalidPassword (password = this._config.password) {
-    return CE.PasswordMisMatchException.invoke('Cannot verify user password', password, this.scheme)
+    return CE.PasswordMisMatchException.invoke('Cannot verify credential', password, this.scheme)
   }
 }
 
