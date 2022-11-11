@@ -234,9 +234,8 @@ class LucidSerializer {
    *
    * @return {void}
    */
-  async saveToken(user, token, type, extraProps = null) {
-    let insertPayload = { token, type, is_revoked: false };
-    if (extraProps) insertPayload = { ...insertPayload, ...extraProps };
+  async saveToken(user, token, type, extras = {}) {
+    const insertPayload = { token, type, is_revoked: false, ...extras };
     debug(
       "saving token for %s user with %j payload",
       user.primaryKeyValue,

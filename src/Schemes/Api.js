@@ -15,6 +15,8 @@ const GE = require("@adonisjs/generic-exceptions");
 const BaseTokenScheme = require("./BaseToken");
 const CE = require("../Exceptions");
 
+const { isIP } = require("net");
+
 /**
  * This scheme allows to make use of Github style personal API tokens
  * to authenticate a user.
@@ -84,7 +86,7 @@ class ApiScheme extends BaseTokenScheme {
    * }
    * ```
    */
-  async generate(user, extraProps) {
+  async generate(user, extras = {}) {
     /**
      * Throw exception when user is not persisted to
      * database
@@ -99,7 +101,7 @@ class ApiScheme extends BaseTokenScheme {
       user,
       plainToken,
       "api_token",
-      extraProps
+      extras
     );
 
     /**
@@ -165,19 +167,16 @@ class ApiScheme extends BaseTokenScheme {
     }
 
     const tokenInstance = this.user.getRelated("tokens").rows[0];
-    if (tokenInstance.referer) {
-      if (
-        !(
-          this._ctx.request.headers().referer &&
-          this._ctx.request.headers().referer.includes(tokenInstance.referer)
-        )
-      ) {
-        throw CE.InvalidApiToken.invoke();
-      }
-    } else {
-      if (tokenInstance.ip !== this._ctx.request.ip()) {
-        throw CE.InvalidApiToken.invoke();
-      }
+
+    /**
+     * If a client check has been defined, check if its an IP to match with incoming request
+     * else if not an IP, it must be a referer
+     * if null, carry on
+     */
+    if (isIP(tokenInstance.client) && tokenInstance.client !== this._ctx.request.ip()){
+      throw CE.InvalidApiToken.invoke();
+    } else if (tokenInstance.client &&  !this._ctx.request.headers().referer?.startsWith(tokenInstance.client)){
+      throw CE.InvalidApiToken.invoke();
     }
 
     return true;
