@@ -231,7 +231,7 @@ class InvalidJwtToken extends GE.LogicalException {
  */
 class InvalidRefreshToken extends GE.LogicalException {
   static invoke (refreshToken) {
-    return new this("The refresh token is invalid", 401, 'E_AUTH_TOKEN_INVALID')
+    return new this("The refresh token is invalid", 401, 'E_AUTH_REFRESH_TOKEN_INVALID')
   }
 }
 
@@ -242,7 +242,7 @@ class InvalidRefreshToken extends GE.LogicalException {
  */
 class ExpiredJwtToken extends GE.LogicalException {
   static invoke () {
-    return new this('The access token has expired', 401, 'E_AUTH_TOKEN_INVALID')
+    return new this('The access token has expired', 401, 'E_AUTH_TOKEN_EXPIRED')
   }
 }
 
