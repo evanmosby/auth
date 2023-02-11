@@ -157,12 +157,70 @@ export abstract class BaseGuard<Guard extends keyof GuardsList> {
    * Verifies user credentials
    */
   public async verifyCredentials(uid: string, password: string): Promise<any> {
-    if (!uid || !password) {
-      throw InvalidCredentialsException.invalidUid(this.name)
+    if (!uid || !password) {       
+      throw InvalidCredentialsException_1.InvalidCredentialsException.invalidUid(this.name);
+    }
+    const providerUser = await this.lookupUsingUid(uid);
+
+    try{
+      await this.verifyPassword(providerUser, password);
+    }catch(err){
+      await this._handleLockoutPolicy(providerUser.user,false)
+      throw err
     }
 
-    const providerUser = await this.lookupUsingUid(uid)
-    await this.verifyPassword(providerUser, password)
-    return providerUser.user
+    await this._handleLockoutPolicy(providerUser.user,true)
+  
+    return providerUser.user;
+  }
+
+  /**
+     * Increments user failed login attempts on incorrect password. Throws error if user is locked out
+     */
+  protected async _handleLockoutPolicy(user:any,successfulLogin:boolean): Promise<any>{
+     // If we don't have a lockout policy defined on the gaurd, just skip
+     if(!this.config.lockoutPolicy?.attempts || !this.config.lockoutPolicy?.duration) return 
+
+     const {attempts,duration} = this.config.lockoutPolicy;
+
+     if(successfulLogin){
+         if (
+             user.account_status === "locked" &&
+             user.account_lockout_time > Date.now()
+         ) {
+             console.log('='.repeat(50),"success",1)
+             throw new Error("USER LOCKED");
+         }else{
+             console.log('='.repeat(50),"success",2)
+             user.account_lockout_attempts = 0;
+             user.account_lockout_time = null;
+             user.account_status = null;
+         }
+     }else{
+         if (user.account_lockout_time !== null && user.account_lockout_time <= Date.now()) {
+             console.log('='.repeat(50),"fail",1)
+             user.account_lockout_time = new Date(
+               Date.now() + duration * 1000
+             );
+             user.account_lockout_attempts = 1;
+             user.account_status = null;
+           } else if (user.account_status === "locked") {
+             console.log('='.repeat(50),"fail",2)
+             throw new Error("USER LOCKED");
+           } else {
+             console.log('='.repeat(50),"fail",3)
+             user.account_lockout_attempts++;
+             if (user.account_lockout_attempts >= attempts) {
+               user.account_status = "locked";
+               user.account_lockout_time = new Date(
+                 Date.now() + duration * 1000
+               );
+               await user.save();
+               throw new Error("USER LOCKED");
+             }
+           }
+     }
+     
+     await user.save()
   }
 }
