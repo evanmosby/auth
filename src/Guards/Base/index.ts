@@ -189,32 +189,32 @@ export abstract class BaseGuard<Guard extends keyof GuardsList> {
     const { attempts, duration } = this.config.lockoutPolicy
 
     if (successfulLogin) {
+      // Successful login but locked out
       if (user.account_status === 'locked' && user.account_lockout_time > Date.now()) {
-        console.log('='.repeat(50), 'success', 1)
-        throw new Error('USER LOCKED')
+        throw InvalidCredentialsException.userLockout(this.name)
       } else {
-        console.log('='.repeat(50), 'success', 2)
+        // Successful login and not logged out
         user.account_lockout_attempts = 0
         user.account_lockout_time = null
         user.account_status = null
       }
     } else {
+      // Failed login attempt, and was previously locked out, bump lockout time again.
       if (user.account_lockout_time !== null && user.account_lockout_time <= Date.now()) {
-        console.log('='.repeat(50), 'fail', 1)
         user.account_lockout_time = new Date(Date.now() + duration * 1000)
         user.account_lockout_attempts = 1
         user.account_status = null
+        // Failed login attempt (lockout time in future)
       } else if (user.account_status === 'locked') {
-        console.log('='.repeat(50), 'fail', 2)
-        throw new Error('USER LOCKED')
+        throw InvalidCredentialsException.userLockout(this.name)
       } else {
-        console.log('='.repeat(50), 'fail', 3)
+        // Failed login attempt, but not currently locked
         user.account_lockout_attempts++
         if (user.account_lockout_attempts >= attempts) {
           user.account_status = 'locked'
           user.account_lockout_time = new Date(Date.now() + duration * 1000)
           await user.save()
-          throw new Error('USER LOCKED')
+          throw InvalidCredentialsException.userLockout(this.name)
         }
       }
     }

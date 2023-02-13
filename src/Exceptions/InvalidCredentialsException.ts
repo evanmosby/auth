@@ -35,6 +35,12 @@ export class InvalidCredentialsException extends Exception {
     return error
   }
 
+  public static userLockout(guard: string) {
+    const error = new this('User is currently locked', 400, 'E_USER_LOCKED')
+    error.guard = guard
+    return error
+  }
+
   /**
    * Send response as an array of errors
    */
