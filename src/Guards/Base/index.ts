@@ -167,58 +167,8 @@ export abstract class BaseGuard<Guard extends keyof GuardsList> {
     }
     const providerUser = await this.lookupUsingUid(uid)
 
-    try {
-      await this.verifyPassword(providerUser, password)
-    } catch (err) {
-      await this._handleLockoutPolicy(providerUser.user, false)
-      throw err
-    }
-
-    await this._handleLockoutPolicy(providerUser.user, true)
+    await this.verifyPassword(providerUser, password)
 
     return providerUser.user
-  }
-
-  /**
-   * Increments user failed login attempts on incorrect password. Throws error if user is locked out
-   */
-  protected async _handleLockoutPolicy(user: any, successfulLogin: boolean): Promise<any> {
-    // If we don't have a lockout policy defined on the gaurd, just skip
-    if (!this.config.lockoutPolicy?.attempts || !this.config.lockoutPolicy?.duration) return
-
-    const { attempts, duration } = this.config.lockoutPolicy
-
-    if (successfulLogin) {
-      // Successful login but locked out
-      if (user.account_status === 'locked' && user.account_lockout_time > Date.now()) {
-        throw InvalidCredentialsException.userLockout(this.name)
-      } else {
-        // Successful login and not logged out
-        user.account_lockout_attempts = 0
-        user.account_lockout_time = null
-        user.account_status = null
-      }
-    } else {
-      // Failed login attempt, and was previously locked out, bump lockout time again.
-      if (user.account_lockout_time !== null && user.account_lockout_time <= Date.now()) {
-        user.account_lockout_time = new Date(Date.now() + duration * 1000)
-        user.account_lockout_attempts = 1
-        user.account_status = null
-        // Failed login attempt (lockout time in future)
-      } else if (user.account_status === 'locked') {
-        throw InvalidCredentialsException.userLockout(this.name)
-      } else {
-        // Failed login attempt, but not currently locked
-        user.account_lockout_attempts++
-        if (user.account_lockout_attempts >= attempts) {
-          user.account_status = 'locked'
-          user.account_lockout_time = new Date(Date.now() + duration * 1000)
-          await user.save()
-          throw InvalidCredentialsException.userLockout(this.name)
-        }
-      }
-    }
-
-    await user.save()
   }
 }
